@@ -14,6 +14,9 @@ def auth(user, passwd):
 def autofill_quiz(quiz_id):
     pass
 
+def has_pending_quiz():
+    pass
+
 def main():
     pass
 
