@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from getpass import getpass
 from sys import argv, exit
 
 from selenium.webdriver import Chrome, ChromeOptions
@@ -7,12 +8,12 @@ from selenium.common.exceptions import NoSuchElementException
 
 def do_auth(drv):
     user = input('user: ')
-    passwd = input('password: ')
+    passwd = getpass('password: ')
 
     if auth(drv, user, passwd):
         print('the credentials are valid')
     else:
-        print('failed to login with the provided credentials')
+        print('the credentials are invalid')
 
 def auth(drv, user, passwd):
     drv.get('https://qacademico.ifce.edu.br/qacademico/index.asp?t=1001')
@@ -21,7 +22,7 @@ def auth(drv, user, passwd):
     drv.find_element(by=By.XPATH, value='//*[@id="txtSenha"]').send_keys(passwd)
     drv.find_element(by=By.XPATH, value='//*[@id="btnOk"]').click()
 
-    # check the authentication result
+    # check the authentication result by finding the 'exit' button
     try:
         drv.find_element(by=By.XPATH, value='//*[@id="Image1"]')
 
@@ -31,19 +32,16 @@ def auth(drv, user, passwd):
 
 def do_is_matriculation_available(drv):
     user = input('user: ')
-    passwd = input('password: ')
+    passwd = getpass('password: ')
 
     if auth(drv, user, passwd):
-        ret = is_matriculation_available(drv)
-
-        if ret:
+        if is_matriculation_available(drv):
             print('matriculation available')
         else:
             print('matriculation not available')
 
 def is_matriculation_available(drv):
-    no_matriculation_txt = '- Não há nenhuma etapa de pedido de ' \
-        'matrícula aberta no momento.'
+    txt = '- Não há nenhuma etapa de pedido de matrícula aberta no momento.'
 
     drv.get('https://qacademico.ifce.edu.br/qacademico/index.asp?t=2047')
 
@@ -54,35 +52,34 @@ def is_matriculation_available(drv):
                 + '/table[2]/tbody/tr/td[2]/span'
         )
 
-        if element.text == no_matriculation_txt:
+        if element.text == txt:
             return False
     except NoSuchElementException:
         return True
 
-def do_show_inbox(drv, n_msgs):
+def do_show_last_msgs(drv):
     user = input('user: ')
-    passwd = input('password: ')
+    passwd = getpass('password: ')
 
     if auth(drv, user, passwd):
-        ret = show_inbox(drv, n_msgs)
-        for item in ret:
+        for item in show_last_msgs(drv):
             print(
                 'title: {}\nissuer: {}\ntimestamp: {}\n'.format(
                     item['title'], item['issuer'], item['timestamp']
                 )
             )
 
-def show_inbox(drv, n_msgs):
+def show_last_msgs(drv):
     xpath_base = '//*[@id="ctl00_ContentPlaceHolderPrincipal_wucMensagens' \
         '1_grdMensagens"]/tbody/'
+    max_msgs = 20
+    offset = 3
     msgs = []
 
     drv.get('https://qacademico.ifce.edu.br/qacademicodotnet/mensagens.aspx')
 
-    try:
-        offset = 3
-
-        for i in range(offset, offset + int(n_msgs)):
+    for i in range(offset, offset + max_msgs):
+        try:
             title = drv.find_element(
                 by=By.XPATH,
                 value='{}/tr[{}]/td[5]'.format(xpath_base, i)
@@ -103,11 +100,10 @@ def show_inbox(drv, n_msgs):
                     'timestamp': timestamp.text
                 }
             )
-    except NoSuchElementException as err:
-        print(err)
+        except NoSuchElementException:
+            break
 
     return msgs
-
 
 def parse_args():
     parser = ArgumentParser(prog='pyfce')
@@ -128,30 +124,32 @@ def parse_args():
 
     parser.add_argument(
         '-s',
-        '--show-msg-list',
-        help='show the list of inbox messages',
-        metavar='n_messages'
+        '--show-last-msgs',
+        help='show the last inbox messages',
+        action='store_true'
     )
 
     # no arguments were provided
     if len(argv) == 1:
         parser.print_help()
+        return None
 
     return parser.parse_args()
 
 def main(args):
-    op = ChromeOptions()
-    op.add_argument('headless')
+    if args:
+        op = ChromeOptions()
+        op.add_argument('headless')
 
-    drv = Chrome(options=op)
-    drv.set_page_load_timeout(10)
+        drv = Chrome(options=op)
+        drv.set_page_load_timeout(10)
 
-    if args.check_credentials:
-        do_auth(drv)
-    if args.show_msg_list:
-        do_show_inbox(drv, args.show_msg_list)
-    if args.check_matriculation:
-        do_is_matriculation_available(drv)
+        if args.check_credentials:
+            do_auth(drv)
+        if args.show_last_msgs:
+            do_show_last_msgs(drv)
+        if args.check_matriculation:
+            do_is_matriculation_available(drv)
 
 if __name__ == "__main__":
     try:
