@@ -70,40 +70,26 @@ def do_show_last_msgs(drv):
             )
 
 def show_last_msgs(drv):
-    xpath_base = '//*[@id="ctl00_ContentPlaceHolderPrincipal_wucMensagens' \
-        '1_grdMensagens"]/tbody/'
     max_msgs = 20
     offset = 3
-    msgs = []
+    fmt = '//*[@id="ctl00_ContentPlaceHolderPrincipal_' \
+        'wucMensagens1_grdMensagens"]/tbody/tr[{}]/td[{}]'
 
     drv.get('https://qacademico.ifce.edu.br/qacademicodotnet/mensagens.aspx')
 
     for i in range(offset, offset + max_msgs):
         try:
-            title = drv.find_element(
-                by=By.XPATH,
-                value='{}/tr[{}]/td[5]'.format(xpath_base, i)
-            )
-            issuer = drv.find_element(
-                by=By.XPATH,
-                value='{}/tr[{}]/td[6]'.format(xpath_base, i)
-            )
-            timestamp = drv.find_element(
-                by=By.XPATH,
-                value='{}/tr[{}]/td[7]'.format(xpath_base, i)
-            )
+            title = drv.find_element(by=By.XPATH, value=fmt.format(i, 5))
+            issuer = drv.find_element(by=By.XPATH, value=fmt.format(i, 6))
+            timestamp = drv.find_element(by=By.XPATH, value=fmt.format(i, 7))
 
-            msgs.append(
-                {
-                    'title': title.text,
-                    'issuer': issuer.text,
-                    'timestamp': timestamp.text
-                }
-            )
+            yield {
+                'title': title.text,
+                'issuer': issuer.text,
+                'timestamp': timestamp.text
+            }
         except NoSuchElementException:
             break
-
-    return msgs
 
 def parse_args():
     parser = ArgumentParser(prog='pyfce')
