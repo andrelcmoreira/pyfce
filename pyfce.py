@@ -98,13 +98,13 @@ def do_show_schedule(drv):
     passwd = getpass('password: ')
 
     if auth(drv, user, passwd):
-        items = show_schedule(drv, user, passwd)
+        items = show_schedule(drv)
         table = Texttable()
 
         table.add_rows(items)
         print(table.draw())
 
-def show_schedule(drv, user, passwd):
+def show_schedule(drv):
     data = [[], [], [], [], [], [], []]
     fmt = '/html/body/table/tbody/tr[2]/td/table/tbody/tr[2]/td[2]/' \
         'table[3]/tbody/tr[{}]/td[{}]'
