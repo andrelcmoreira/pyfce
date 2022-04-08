@@ -6,6 +6,8 @@ from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
+from texttable import Texttable
+
 def do_auth(drv):
     user = input('user: ')
     passwd = getpass('password: ')
@@ -91,6 +93,32 @@ def show_last_msgs(drv):
         except NoSuchElementException:
             break
 
+def do_show_schedule(drv):
+    user = input('user: ')
+    passwd = getpass('password: ')
+
+    if auth(drv, user, passwd):
+        items = show_schedule(drv, user, passwd)
+        table = Texttable()
+
+        table.add_rows(items)
+        print(table.draw())
+
+def show_schedule(drv, user, passwd):
+    data = [[], [], [], [], [], [], []]
+    fmt = '/html/body/table/tbody/tr[2]/td/table/tbody/tr[2]/td[2]/' \
+        'table[3]/tbody/tr[{}]/td[{}]'
+
+    drv.get('https://qacademico.ifce.edu.br/qacademico/index.asp?t=2010')
+
+    for i in range(1, len(data) + 1, 1): # TODO: set the maximum number of lines
+        for j in range(1, 7, 1): # 6 = SEG-SEX + HORÁRIO
+            el = drv.find_element(by=By.XPATH, value=fmt.format(i, j))
+
+            data[i - 1].insert(j - 1, el.text)
+
+    return data
+
 def parse_args():
     parser = ArgumentParser(prog='pyfce')
 
@@ -109,9 +137,16 @@ def parse_args():
     )
 
     parser.add_argument(
-        '-s',
+        '-l',
         '--show-last-msgs',
         help='show the last inbox messages',
+        action='store_true'
+    )
+
+    parser.add_argument(
+        '-s',
+        '--show-schedule',
+        help='show the schedule',
         action='store_true'
     )
 
@@ -136,6 +171,8 @@ def main(args):
             do_show_last_msgs(drv)
         if args.check_matriculation:
             do_is_matriculation_available(drv)
+        if args.show_schedule:
+            do_show_schedule(drv)
 
 if __name__ == "__main__":
     try:
